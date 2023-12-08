@@ -35,6 +35,9 @@ def test_copy(using_copy_on_write):
         assert not df_copy._mgr.blocks[0].refs.has_reference()
         assert not df_copy._mgr.blocks[1].refs.has_reference()
 
+    assert df_copy.index is not df.index
+    assert df_copy.columns is not df.columns
+
     # mutating copy doesn't mutate original
     df_copy.iloc[0, 0] = 0
     assert df.iloc[0, 0] == 1

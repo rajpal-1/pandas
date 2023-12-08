@@ -60,6 +60,9 @@ def test_subset_column_selection(backend, using_copy_on_write):
     subset = df[["a", "c"]]
 
     if using_copy_on_write:
+        assert subset.index is not df.index
+
+    if using_copy_on_write:
         # the subset shares memory ...
         assert np.shares_memory(get_array(subset, "a"), get_array(df, "a"))
         # ... but uses CoW when being modified
@@ -111,6 +114,9 @@ def test_subset_row_slice(backend, using_copy_on_write, warn_copy_on_write):
     subset = df[1:3]
     subset._mgr._verify_integrity()
 
+    if using_copy_on_write:
+        assert subset.columns is not df.columns
+
     assert np.shares_memory(get_array(subset, "a"), get_array(df, "a"))
 
     if using_copy_on_write:
@@ -156,6 +162,9 @@ def test_subset_column_slice(
 
     subset = df.iloc[:, 1:]
     subset._mgr._verify_integrity()
+
+    if using_copy_on_write:
+        assert subset.index is not df.index
 
     if using_copy_on_write:
         assert np.shares_memory(get_array(subset, "b"), get_array(df, "b"))
@@ -218,6 +227,10 @@ def test_subset_loc_rows_columns(
     df_orig = df.copy()
 
     subset = df.loc[row_indexer, column_indexer]
+
+    if using_copy_on_write:
+        assert subset.index is not df.index
+        assert subset.columns is not df.columns
 
     # a few corner cases _do_ actually modify the parent (with both row and column
     # slice, and in case of ArrayManager or BlockManager with single block)
@@ -282,6 +295,10 @@ def test_subset_iloc_rows_columns(
     df_orig = df.copy()
 
     subset = df.iloc[row_indexer, column_indexer]
+
+    if using_copy_on_write:
+        assert subset.index is not df.index
+        assert subset.columns is not df.columns
 
     # a few corner cases _do_ actually modify the parent (with both row and column
     # slice, and in case of ArrayManager or BlockManager with single block)
@@ -773,6 +790,10 @@ def test_null_slice(backend, method, using_copy_on_write, warn_copy_on_write):
 
     df2 = method(df)
 
+    if using_copy_on_write:
+        assert df2.index is not df.index
+        assert df2.columns is not df.columns
+
     # we always return new objects (shallow copy), regardless of CoW or not
     assert df2 is not df
 
@@ -800,6 +821,9 @@ def test_null_slice_series(backend, method, using_copy_on_write, warn_copy_on_wr
     s_orig = s.copy()
 
     s2 = method(s)
+
+    if using_copy_on_write:
+        assert s2.index is not s.index
 
     # we always return new objects, regardless of CoW or not
     assert s2 is not s
@@ -977,6 +1001,9 @@ def test_column_as_series(
 
     s = df["a"]
 
+    if using_copy_on_write:
+        assert s.index is not df.index
+
     assert np.shares_memory(get_array(s, "a"), get_array(df, "a"))
 
     if using_copy_on_write or using_array_manager:
@@ -1073,6 +1100,10 @@ def test_column_as_series_no_item_cache(
 
     s1 = method(df)
     s2 = method(df)
+
+    if using_copy_on_write:
+        assert s1.index is not df.index
+        assert s1.index is not s2.index
 
     is_iloc = "iloc" in request.node.name
     if using_copy_on_write or warn_copy_on_write or is_iloc:
