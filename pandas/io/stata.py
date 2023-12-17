@@ -429,6 +429,14 @@ def _datetime_to_stata_elapsed_vec(dates: Series, fmt: str) -> Series:
                 d["days"] = days_in_ns // NS_PER_DAY
 
         elif infer_dtype(dates, skipna=False) == "datetime":
+            # - Deprecated casting object-dtype columns of datetimes to datetime64 when writing to stata; call df=df.infer_objects() before writing to stata instead (:issue:`??`)
+            warnings.warn(
+                "Converting object-dtype columns of datetimes to datetime64 when "
+                "writing to stata is deprecated. Call "
+                "`df=df.infer_objects(copy=False)` before writing to stata instead.",
+                FutureWarning,
+                stacklevel=find_stack_level(),
+            )
             if delta:
                 delta = dates._values - stata_epoch
 
