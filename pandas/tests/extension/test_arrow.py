@@ -3363,3 +3363,194 @@ def test_to_numpy_timestamp_to_int():
     result = ser.to_numpy(dtype=np.int64)
     expected = np.array([1577853000000000000])
     tm.assert_numpy_array_equal(result, expected)
+
+
+def test_cat_categories():
+    arrs = [
+        pa.array(np.array(["a", "x", "c", "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "d", "c"])).dictionary_encode(),
+    ]
+    ser = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    result = ser.cat.categories
+    expected = ArrowExtensionArray(pa.array(np.array(["a", "x", "c", "d"])))
+    tm.assert_extension_array_equal(result, expected)
+    assert not ser.cat.ordered
+
+
+def test_cat_rename_categories():
+    arrs = [
+        pa.array(np.array(["a", "x", "c", "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "d", "c"])).dictionary_encode(),
+    ]
+    ser = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    result = ser.cat.rename_categories(["a", "b", "c", "d"])
+    expected = pd.Series(
+        ArrowExtensionArray(
+            pa.array(np.array(["a", "b", "c", "a", "a", "d", "c"])).dictionary_encode()
+        )
+    )
+    tm.assert_series_equal(result, expected)
+
+    result = ser.cat.rename_categories({"a": "b"})
+    expected = pd.Series(
+        ArrowExtensionArray(
+            pa.array(np.array(["b", "x", "c", "b", "b", "d", "c"])).dictionary_encode()
+        )
+    )
+    tm.assert_series_equal(result, expected)
+
+    result = ser.cat.rename_categories(lambda x: "b" if x == "a" else x)
+    tm.assert_series_equal(result, expected)
+
+    arrs = [
+        pa.array(np.array(["a", "x", "c", "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "x", "c", "a"])).dictionary_encode(),
+    ]
+    ser = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    result = ser.cat.rename_categories(["a", "b", "c", "d"])
+    expected = pd.Series(
+        ArrowExtensionArray(
+            pa.array(
+                np.array(["a", "b", "c", "a", "a", "b", "c", "a"])
+            ).dictionary_encode()
+        )
+    )
+    tm.assert_series_equal(result, expected, check_dtype=False)
+    assert len(result.values._pa_array.chunks) == 2
+
+
+def test_cat_reorder_categories():
+    arrs = [
+        pa.array(np.array(["a", "x", "c", "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "d", "c"])).dictionary_encode(),
+    ]
+    ser = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    result = ser.cat.reorder_categories(["x", "c", "d", "a"])
+    indices = pa.array([3, 0, 1, 3, 3, 2, 1], type=pa.int8())
+    dictionary = pa.array(["x", "c", "d", "a"])
+    expected = pd.Series(
+        ArrowExtensionArray(pa.DictionaryArray.from_arrays(indices, dictionary))
+    )
+    tm.assert_series_equal(result, expected)
+
+    arrs = [
+        pa.array(np.array(["a", "x", "c", "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "x", "c"])).dictionary_encode(),
+    ]
+    ser = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    result = ser.cat.reorder_categories(["x", "c", "a"])
+    indices = pa.array([2, 0, 1, 2, 2, 0, 1], type=pa.int8())
+    dictionary = pa.array(["x", "c", "a"])
+    expected = pd.Series(
+        ArrowExtensionArray(pa.DictionaryArray.from_arrays(indices, dictionary))
+    )
+    tm.assert_series_equal(result, expected)
+    assert len(result.values._pa_array.chunks) == 2
+
+
+def test_cat_add_categories():
+    arrs = [
+        pa.array(np.array(["a", "x", "c", "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "d", "c"])).dictionary_encode(),
+    ]
+    ser = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    result = ser.cat.add_categories(["y"]).cat.categories
+    expected = ArrowExtensionArray(pa.array(["a", "x", "c", "d", "y"]))
+    tm.assert_extension_array_equal(result, expected)
+
+    result = ser.cat.add_categories(["y"])
+    tm.assert_series_equal(result, ser, check_dtype=False)
+
+    arrs = [
+        pa.array(np.array(["a", "x", "c", "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "x", "c"])).dictionary_encode(),
+    ]
+    ser = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    result = ser.cat.add_categories(["y"]).cat.categories
+    expected = ArrowExtensionArray(pa.array(["a", "x", "c", "y"]))
+    tm.assert_extension_array_equal(result, expected)
+
+    result = ser.cat.add_categories(["y"])
+    tm.assert_series_equal(result, ser, check_dtype=False)
+
+
+def test_remove_categories():
+    arrs = [
+        pa.array(np.array(["a", "x", "c", "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "d", "c"])).dictionary_encode(),
+    ]
+    ser = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    result = ser.cat.remove_categories(["x", "c"])
+    arrs = [
+        pa.array(np.array(["a", None, None, "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "d", None])).dictionary_encode(),
+    ]
+    expected = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    tm.assert_series_equal(result, expected)
+
+
+def test_remove_unused_categories():
+    pa_arr = pa.array(np.array(["a", "x", "c", "y"]))
+    pa_indices = pa.array(np.array([1, 2, 3, 1, 2, 1, 2]))
+    ser = pd.Series(
+        ArrowExtensionArray(pa.DictionaryArray.from_arrays(pa_indices, pa_arr))
+    )
+
+    result = ser.cat.remove_unused_categories().cat.categories
+    expected = ArrowExtensionArray(pa.array(["x", "c", "y"]))
+    tm.assert_extension_array_equal(result, expected)
+
+    result = ser.cat.remove_unused_categories()
+    pa_arr = pa.array(np.array(["x", "c", "y"]))
+    pa_indices = pa.array(np.array([0, 1, 2, 0, 1, 0, 1]))
+    expected = pd.Series(
+        ArrowExtensionArray(pa.DictionaryArray.from_arrays(pa_indices, pa_arr))
+    )
+    tm.assert_series_equal(result, expected)
+
+
+def test_set_categories():
+    arrs = [
+        pa.array(np.array(["a", "x", "c", "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "d", "c"])).dictionary_encode(),
+    ]
+    ser = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    result = ser.cat.set_categories(["b", "y", "d", "e"], rename=True)
+    arrs = [
+        pa.array(np.array(["b", "y", "d", "b"])).dictionary_encode(),
+        pa.array(np.array(["b", "e", "d"])).dictionary_encode(),
+    ]
+    expected = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    tm.assert_series_equal(result, expected)
+
+    result = ser.cat.set_categories(["b", "y", "d", "e", "z"], rename=True)
+    tm.assert_series_equal(result, expected, check_dtype=False)
+    result = ser.cat.set_categories(
+        ["b", "y", "d", "e", "z"], rename=True
+    ).cat.categories
+    expected = ArrowExtensionArray(pa.array(["b", "y", "d", "e", "z"]))
+    tm.assert_extension_array_equal(result, expected)
+
+    arrs = [
+        pa.array(np.array(["a", "x", "c", "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "d", "c"])).dictionary_encode(),
+    ]
+    ser = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    result = ser.cat.set_categories(["c", "y", "a", "d"])
+    arrs = [
+        pa.array(np.array(["a", None, "c", "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "d", "c"])).dictionary_encode(),
+    ]
+    expected = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    tm.assert_series_equal(result, expected, check_dtype=False)  # we get int8 back
+
+
+def test_as_ordered_unordered():
+    arrs = [
+        pa.array(np.array(["a", "x", "c", "a"])).dictionary_encode(),
+        pa.array(np.array(["a", "d", "c"])).dictionary_encode(),
+    ]
+    ser = pd.Series(ArrowExtensionArray(pa.chunked_array(arrs)))
+    result = ser.cat.as_ordered()
+    assert result.cat.ordered
+    assert not result.cat.as_unordered().cat.ordered
