@@ -109,7 +109,7 @@ def test_apply_index_date_object(using_infer_string):
         1.40750,
         1.40649,
     ]
-    dtype = "string[pyarrow_numpy]" if using_infer_string else object
+    dtype = "string[pyarrow_numpy]" if using_infer_string else None
     exp_idx = Index(
         ["2011-05-16", "2011-05-17", "2011-05-18"], dtype=dtype, name="date"
     )
@@ -1243,9 +1243,7 @@ def test_apply_dropna_with_indexed_same(dropna):
     [
         [
             False,
-            DataFrame(
-                [[1, 1, 1], [2, 2, 1]], columns=Index(["a", "b", None], dtype=object)
-            ),
+            DataFrame([[1, 1, 1], [2, 2, 1]], columns=Index(["a", "b", None])),
         ],
         [
             True,

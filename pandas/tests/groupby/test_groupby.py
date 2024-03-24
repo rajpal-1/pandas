@@ -2315,14 +2315,18 @@ def test_groupby_all_nan_groups_drop():
 
 
 @pytest.mark.parametrize("numeric_only", [True, False])
-def test_groupby_empty_multi_column(as_index, numeric_only):
+def test_groupby_empty_multi_column(as_index, numeric_only, using_infer_string):
     # GH 15106 & GH 41998
     df = DataFrame(data=[], columns=["A", "B", "C"])
     gb = df.groupby(["A", "B"], as_index=as_index)
     result = gb.sum(numeric_only=numeric_only)
     if as_index:
         index = MultiIndex([[], []], [[], []], names=["A", "B"])
-        columns = ["C"] if not numeric_only else []
+        if using_infer_string:
+            dtype = "string[pyarrow_numpy]"
+        else:
+            dtype = object
+        columns = ["C"] if not numeric_only else Index([], dtype=dtype)
     else:
         index = RangeIndex(0)
         columns = ["A", "B", "C"] if not numeric_only else ["A", "B"]
@@ -2340,7 +2344,7 @@ def test_groupby_aggregation_non_numeric_dtype():
         {
             "v": [[1, 1], [10, 20]],
         },
-        index=Index(["M", "W"], dtype="object", name="MW"),
+        index=Index(["M", "W"], name="MW"),
     )
 
     gb = df.groupby(by=["MW"])
@@ -2487,11 +2491,16 @@ def test_groupby_none_in_first_mi_level():
     tm.assert_series_equal(result, expected)
 
 
-def test_groupby_none_column_name():
+def test_groupby_none_column_name(using_infer_string):
     # GH#47348
     df = DataFrame({None: [1, 1, 2, 2], "b": [1, 1, 2, 3], "c": [4, 5, 6, 7]})
-    result = df.groupby(by=[None]).sum()
-    expected = DataFrame({"b": [2, 5], "c": [9, 13]}, index=Index([1, 2], name=None))
+    if using_infer_string:
+        result = df.groupby(by=[np.nan]).sum()
+        name = np.nan
+    else:
+        result = df.groupby(by=[None]).sum()
+        name = None
+    expected = DataFrame({"b": [2, 5], "c": [9, 13]}, index=Index([1, 2], name=name))
     tm.assert_frame_equal(result, expected)
 
 

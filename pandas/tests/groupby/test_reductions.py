@@ -468,7 +468,7 @@ def test_max_min_non_numeric():
     assert "ss" in result
 
 
-def test_max_min_object_multiple_columns():
+def test_max_min_object_multiple_columns(using_infer_string):
     # GH#41111 case where the aggregation is valid for some columns but not
     # others; we split object blocks column-wise, consistent with
     # DataFrame._reduce
@@ -481,7 +481,10 @@ def test_max_min_object_multiple_columns():
         }
     )
     df._consolidate_inplace()  # should already be consolidate, but double-check
-    assert len(df._mgr.blocks) == 2
+    if using_infer_string:
+        assert len(df._mgr.blocks) == 3
+    else:
+        assert len(df._mgr.blocks) == 2
 
     gb = df.groupby("A")
 

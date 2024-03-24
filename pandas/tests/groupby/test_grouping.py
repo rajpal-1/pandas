@@ -789,7 +789,7 @@ class TestGrouping:
         expected = ["name"]
         assert result == expected
 
-    def test_groupby_level_index_value_all_na(self):
+    def test_groupby_level_index_value_all_na(self, using_infer_string):
         # issue 20519
         df = DataFrame(
             [["x", np.nan, 10], [None, np.nan, 20]], columns=["A", "B", "C"]
@@ -805,7 +805,7 @@ class TestGrouping:
             columns=["C"],
             dtype="int64",
         )
-        tm.assert_frame_equal(result, expected)
+        tm.assert_frame_equal(result, expected, check_index_type=not using_infer_string)
 
     def test_groupby_multiindex_level_empty(self):
         # https://github.com/pandas-dev/pandas/issues/31670
@@ -933,11 +933,14 @@ class TestGetGroup:
         grouped = series.groupby(grouper)
         assert next(iter(grouped), None) is None
 
-    def test_groupby_with_single_column(self):
+    def test_groupby_with_single_column(self, using_infer_string):
         df = DataFrame({"a": list("abssbab")})
         tm.assert_frame_equal(df.groupby("a").get_group("a"), df.iloc[[0, 5]])
         # GH 13530
-        exp = DataFrame(index=Index(["a", "b", "s"], name="a"), columns=[])
+        dtype = "string[pyarrow_numpy]" if using_infer_string else object
+        exp = DataFrame(
+            index=Index(["a", "b", "s"], name="a"), columns=Index([], dtype=dtype)
+        )
         tm.assert_frame_equal(df.groupby("a").count(), exp)
         tm.assert_frame_equal(df.groupby("a").sum(), exp)
 
