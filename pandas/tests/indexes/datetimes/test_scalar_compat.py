@@ -135,7 +135,8 @@ class TestDatetimeIndexOps:
     # GH#12806
     # error: Unsupported operand types for + ("List[None]" and "List[str]")
     @pytest.mark.parametrize(
-        "time_locale", [None] + tm.get_locales()  # type: ignore[operator]
+        "time_locale",
+        [None] + tm.get_locales(),  # type: ignore[operator]
     )
     def test_day_name_month_name(self, time_locale):
         # Test Monday -> Sunday and January -> December, in that sequence
@@ -327,3 +328,18 @@ class TestDatetimeIndexOps:
         msg = "Custom business days is not supported by is_month_start"
         with pytest.raises(ValueError, match=msg):
             dti.is_month_start
+
+    def test_dti_is_year_quarter_start_doubledigit_freq(self):
+        # GH#58523
+        dr = date_range("2017-01-01", periods=2, freq="10YS")
+        assert all(dr.is_year_start)
+
+        dr = date_range("2017-01-01", periods=2, freq="10QS")
+        assert all(dr.is_quarter_start)
+
+    def test_dti_is_year_start_freq_custom_business_day_with_digit(self):
+        # GH#58664
+        dr = date_range("2020-01-01", periods=2, freq="2C")
+        msg = "Custom business days is not supported by is_year_start"
+        with pytest.raises(ValueError, match=msg):
+            dr.is_year_start

@@ -9,6 +9,7 @@ from pandas import (
     date_range,
 )
 import pandas._testing as tm
+from pandas.util.version import Version
 
 pytest.importorskip("xarray")
 
@@ -29,11 +30,17 @@ class TestDataFrameToXArray:
             }
         )
 
-    def test_to_xarray_index_types(self, index_flat, df, using_infer_string):
+    def test_to_xarray_index_types(self, index_flat, df, using_infer_string, request):
         index = index_flat
         # MultiIndex is tested in test_to_xarray_with_multiindex
         if len(index) == 0:
             pytest.skip("Test doesn't make sense for empty index")
+        import xarray
+
+        if Version(xarray.__version__) >= Version("2024.5"):
+            request.applymarker(
+                pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/9026")
+            )
 
         from xarray import Dataset
 
@@ -41,7 +48,7 @@ class TestDataFrameToXArray:
         df.index.name = "foo"
         df.columns.name = "bar"
         result = df.to_xarray()
-        assert result.dims["foo"] == 4
+        assert result.sizes["foo"] == 4
         assert len(result.coords) == 1
         assert len(result.data_vars) == 8
         tm.assert_almost_equal(list(result.coords.keys()), ["foo"])
@@ -62,7 +69,7 @@ class TestDataFrameToXArray:
 
         df.index.name = "foo"
         result = df[0:0].to_xarray()
-        assert result.dims["foo"] == 0
+        assert result.sizes["foo"] == 0
         assert isinstance(result, Dataset)
 
     def test_to_xarray_with_multiindex(self, df, using_infer_string):
@@ -71,8 +78,8 @@ class TestDataFrameToXArray:
         # MultiIndex
         df.index = MultiIndex.from_product([["a"], range(4)], names=["one", "two"])
         result = df.to_xarray()
-        assert result.dims["one"] == 1
-        assert result.dims["two"] == 4
+        assert result.sizes["one"] == 1
+        assert result.sizes["two"] == 4
         assert len(result.coords) == 2
         assert len(result.data_vars) == 8
         tm.assert_almost_equal(list(result.coords.keys()), ["one", "two"])

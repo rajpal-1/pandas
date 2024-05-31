@@ -1,6 +1,7 @@
 """
 Also test support for datetime64[ns] in Series / DataFrame
 """
+
 from datetime import (
     datetime,
     timedelta,
@@ -35,9 +36,6 @@ def test_fancy_getitem():
 
     s = Series(np.arange(len(dti)), index=dti)
 
-    msg = "Series.__getitem__ treating keys as positions is deprecated"
-    with tm.assert_produces_warning(FutureWarning, match=msg):
-        assert s[48] == 48
     assert s["1/2/2009"] == 48
     assert s["2009-1-2"] == 48
     assert s[datetime(2009, 1, 2)] == 48
@@ -56,10 +54,6 @@ def test_fancy_setitem():
 
     s = Series(np.arange(len(dti)), index=dti)
 
-    msg = "Series.__setitem__ treating keys as positions is deprecated"
-    with tm.assert_produces_warning(FutureWarning, match=msg):
-        s[48] = -1
-    assert s.iloc[48] == -1
     s["1/2/2009"] = -2
     assert s.iloc[48] == -2
     s["1/2/2009":"2009-06-05"] = -3
@@ -430,7 +424,7 @@ def test_indexing():
     result = ts["2001"]
     tm.assert_series_equal(result, ts.iloc[:12])
 
-    df = DataFrame({"A": ts.copy()})
+    df = DataFrame({"A": ts})
 
     # GH#36179 pre-2.0 df["2001"] operated as slicing on rows. in 2.0 it behaves
     #  like any other key, so raises

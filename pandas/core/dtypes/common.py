@@ -1,6 +1,7 @@
 """
 Common type operations.
 """
+
 from __future__ import annotations
 
 from typing import (
@@ -42,7 +43,6 @@ from pandas.core.dtypes.inference import (
     is_float,
     is_hashable,
     is_integer,
-    is_interval,
     is_iterator,
     is_list_like,
     is_named_tuple,
@@ -169,6 +169,9 @@ def is_sparse(arr) -> bool:
     """
     Check whether an array-like is a 1-D pandas sparse array.
 
+    .. deprecated:: 2.1.0
+        Use isinstance(dtype, pd.SparseDtype) instead.
+
     Check that the one-dimensional array-like is a pandas sparse array.
     Returns True if it is a pandas sparse array, not another type of
     sparse array.
@@ -247,7 +250,7 @@ def is_scipy_sparse(arr) -> bool:
     """
     global _is_scipy_sparse
 
-    if _is_scipy_sparse is None:  # pylint: disable=used-before-assignment
+    if _is_scipy_sparse is None:
         try:
             from scipy.sparse import issparse as _is_scipy_sparse
         except ImportError:
@@ -294,6 +297,9 @@ def is_datetime64_dtype(arr_or_dtype) -> bool:
 def is_datetime64tz_dtype(arr_or_dtype) -> bool:
     """
     Check whether an array-like or dtype is of a DatetimeTZDtype dtype.
+
+    .. deprecated:: 2.1.0
+        Use isinstance(dtype, pd.DatetimeTZDtype) instead.
 
     Parameters
     ----------
@@ -356,6 +362,13 @@ def is_timedelta64_dtype(arr_or_dtype) -> bool:
     boolean
         Whether or not the array-like or dtype is of the timedelta64 dtype.
 
+    See Also
+    --------
+    api.types.is_timedelta64_ns_dtype : Check whether the provided array or dtype is
+        of the timedelta64[ns] dtype.
+    api.types.is_period_dtype : Check whether an array-like or dtype is of the
+        Period dtype.
+
     Examples
     --------
     >>> from pandas.core.dtypes.common import is_timedelta64_dtype
@@ -367,7 +380,7 @@ def is_timedelta64_dtype(arr_or_dtype) -> bool:
     False
     >>> is_timedelta64_dtype(pd.Series([], dtype="timedelta64[ns]"))
     True
-    >>> is_timedelta64_dtype('0 days')
+    >>> is_timedelta64_dtype("0 days")
     False
     """
     if isinstance(arr_or_dtype, np.dtype):
@@ -380,6 +393,9 @@ def is_timedelta64_dtype(arr_or_dtype) -> bool:
 def is_period_dtype(arr_or_dtype) -> bool:
     """
     Check whether an array-like or dtype is of the Period dtype.
+
+    .. deprecated:: 2.2.0
+        Use isinstance(dtype, pd.Period) instead.
 
     Parameters
     ----------
@@ -423,6 +439,9 @@ def is_period_dtype(arr_or_dtype) -> bool:
 def is_interval_dtype(arr_or_dtype) -> bool:
     """
     Check whether an array-like or dtype is of the Interval dtype.
+
+    .. deprecated:: 2.2.0
+        Use isinstance(dtype, pd.IntervalDtype) instead.
 
     Parameters
     ----------
@@ -469,6 +488,9 @@ def is_interval_dtype(arr_or_dtype) -> bool:
 def is_categorical_dtype(arr_or_dtype) -> bool:
     """
     Check whether an array-like or dtype is of the Categorical dtype.
+
+    .. deprecated:: 2.2.0
+        Use isinstance(dtype, pd.CategoricalDtype) instead.
 
     Parameters
     ----------
@@ -544,7 +566,7 @@ def is_string_dtype(arr_or_dtype) -> bool:
     True
     >>> is_string_dtype(int)
     False
-    >>> is_string_dtype(np.array(['a', 'b']))
+    >>> is_string_dtype(np.array(["a", "b"]))
     True
     >>> is_string_dtype(pd.Series([1, 2]))
     False
@@ -646,9 +668,9 @@ def is_integer_dtype(arr_or_dtype) -> bool:
     False
     >>> is_integer_dtype(np.uint64)
     True
-    >>> is_integer_dtype('int8')
+    >>> is_integer_dtype("int8")
     True
-    >>> is_integer_dtype('Int8')
+    >>> is_integer_dtype("Int8")
     True
     >>> is_integer_dtype(pd.Int8Dtype)
     True
@@ -656,13 +678,13 @@ def is_integer_dtype(arr_or_dtype) -> bool:
     False
     >>> is_integer_dtype(np.timedelta64)
     False
-    >>> is_integer_dtype(np.array(['a', 'b']))
+    >>> is_integer_dtype(np.array(["a", "b"]))
     False
     >>> is_integer_dtype(pd.Series([1, 2]))
     True
     >>> is_integer_dtype(np.array([], dtype=np.timedelta64))
     False
-    >>> is_integer_dtype(pd.Index([1, 2.]))  # float
+    >>> is_integer_dtype(pd.Index([1, 2.0]))  # float
     False
     """
     return _is_dtype_type(
@@ -703,9 +725,9 @@ def is_signed_integer_dtype(arr_or_dtype) -> bool:
     False
     >>> is_signed_integer_dtype(np.uint64)  # unsigned
     False
-    >>> is_signed_integer_dtype('int8')
+    >>> is_signed_integer_dtype("int8")
     True
-    >>> is_signed_integer_dtype('Int8')
+    >>> is_signed_integer_dtype("Int8")
     True
     >>> is_signed_integer_dtype(pd.Int8Dtype)
     True
@@ -713,13 +735,13 @@ def is_signed_integer_dtype(arr_or_dtype) -> bool:
     False
     >>> is_signed_integer_dtype(np.timedelta64)
     False
-    >>> is_signed_integer_dtype(np.array(['a', 'b']))
+    >>> is_signed_integer_dtype(np.array(["a", "b"]))
     False
     >>> is_signed_integer_dtype(pd.Series([1, 2]))
     True
     >>> is_signed_integer_dtype(np.array([], dtype=np.timedelta64))
     False
-    >>> is_signed_integer_dtype(pd.Index([1, 2.]))  # float
+    >>> is_signed_integer_dtype(pd.Index([1, 2.0]))  # float
     False
     >>> is_signed_integer_dtype(np.array([1, 2], dtype=np.uint32))  # unsigned
     False
@@ -759,17 +781,17 @@ def is_unsigned_integer_dtype(arr_or_dtype) -> bool:
     False
     >>> is_unsigned_integer_dtype(np.uint64)
     True
-    >>> is_unsigned_integer_dtype('uint8')
+    >>> is_unsigned_integer_dtype("uint8")
     True
-    >>> is_unsigned_integer_dtype('UInt8')
+    >>> is_unsigned_integer_dtype("UInt8")
     True
     >>> is_unsigned_integer_dtype(pd.UInt8Dtype)
     True
-    >>> is_unsigned_integer_dtype(np.array(['a', 'b']))
+    >>> is_unsigned_integer_dtype(np.array(["a", "b"]))
     False
     >>> is_unsigned_integer_dtype(pd.Series([1, 2]))  # signed
     False
-    >>> is_unsigned_integer_dtype(pd.Index([1, 2.]))  # float
+    >>> is_unsigned_integer_dtype(pd.Index([1, 2.0]))  # float
     False
     >>> is_unsigned_integer_dtype(np.array([1, 2], dtype=np.uint32))
     True
@@ -815,9 +837,9 @@ def is_int64_dtype(arr_or_dtype) -> bool:
     False
     >>> is_int64_dtype(np.int64)  # doctest: +SKIP
     True
-    >>> is_int64_dtype('int8')  # doctest: +SKIP
+    >>> is_int64_dtype("int8")  # doctest: +SKIP
     False
-    >>> is_int64_dtype('Int8')  # doctest: +SKIP
+    >>> is_int64_dtype("Int8")  # doctest: +SKIP
     False
     >>> is_int64_dtype(pd.Int64Dtype)  # doctest: +SKIP
     True
@@ -825,11 +847,11 @@ def is_int64_dtype(arr_or_dtype) -> bool:
     False
     >>> is_int64_dtype(np.uint64)  # unsigned  # doctest: +SKIP
     False
-    >>> is_int64_dtype(np.array(['a', 'b']))  # doctest: +SKIP
+    >>> is_int64_dtype(np.array(["a", "b"]))  # doctest: +SKIP
     False
     >>> is_int64_dtype(np.array([1, 2], dtype=np.int64))  # doctest: +SKIP
     True
-    >>> is_int64_dtype(pd.Index([1, 2.]))  # float  # doctest: +SKIP
+    >>> is_int64_dtype(pd.Index([1, 2.0]))  # float  # doctest: +SKIP
     False
     >>> is_int64_dtype(np.array([1, 2], dtype=np.uint32))  # unsigned  # doctest: +SKIP
     False
@@ -858,6 +880,15 @@ def is_datetime64_any_dtype(arr_or_dtype) -> bool:
     bool
         Whether or not the array or dtype is of the datetime64 dtype.
 
+    See Also
+    --------
+    api.types.is_datetime64_dtype : Check whether an array-like or dtype is of the
+        datetime64 dtype.
+    api.is_datetime64_ns_dtype : Check whether the provided array or dtype is of the
+        datetime64[ns] dtype.
+    api.is_datetime64tz_dtype : Check whether an array-like or dtype is of a
+        DatetimeTZDtype dtype.
+
     Examples
     --------
     >>> from pandas.api.types import is_datetime64_any_dtype
@@ -870,7 +901,7 @@ def is_datetime64_any_dtype(arr_or_dtype) -> bool:
     True
     >>> is_datetime64_any_dtype(DatetimeTZDtype("ns", "US/Eastern"))
     True
-    >>> is_datetime64_any_dtype(np.array(['a', 'b']))
+    >>> is_datetime64_any_dtype(np.array(["a", "b"]))
     False
     >>> is_datetime64_any_dtype(np.array([1, 2]))
     False
@@ -890,7 +921,11 @@ def is_datetime64_any_dtype(arr_or_dtype) -> bool:
         tipo = _get_dtype(arr_or_dtype)
     except TypeError:
         return False
-    return lib.is_np_dtype(tipo, "M") or isinstance(tipo, DatetimeTZDtype)
+    return (
+        lib.is_np_dtype(tipo, "M")
+        or isinstance(tipo, DatetimeTZDtype)
+        or (isinstance(tipo, ExtensionDtype) and tipo.kind == "M")
+    )
 
 
 def is_datetime64_ns_dtype(arr_or_dtype) -> bool:
@@ -919,7 +954,7 @@ def is_datetime64_ns_dtype(arr_or_dtype) -> bool:
     False
     >>> is_datetime64_ns_dtype(DatetimeTZDtype("ns", "US/Eastern"))
     True
-    >>> is_datetime64_ns_dtype(np.array(['a', 'b']))
+    >>> is_datetime64_ns_dtype(np.array(["a", "b"]))
     False
     >>> is_datetime64_ns_dtype(np.array([1, 2]))
     False
@@ -961,11 +996,11 @@ def is_timedelta64_ns_dtype(arr_or_dtype) -> bool:
     Examples
     --------
     >>> from pandas.core.dtypes.common import is_timedelta64_ns_dtype
-    >>> is_timedelta64_ns_dtype(np.dtype('m8[ns]'))
+    >>> is_timedelta64_ns_dtype(np.dtype("m8[ns]"))
     True
-    >>> is_timedelta64_ns_dtype(np.dtype('m8[ps]'))  # Wrong frequency
+    >>> is_timedelta64_ns_dtype(np.dtype("m8[ps]"))  # Wrong frequency
     False
-    >>> is_timedelta64_ns_dtype(np.array([1, 2], dtype='m8[ns]'))
+    >>> is_timedelta64_ns_dtype(np.array([1, 2], dtype="m8[ns]"))
     True
     >>> is_timedelta64_ns_dtype(np.array([1, 2], dtype=np.timedelta64))
     False
@@ -1047,7 +1082,7 @@ def needs_i8_conversion(dtype: DtypeObj | None) -> bool:
     False
     >>> needs_i8_conversion(np.dtype(np.datetime64))
     True
-    >>> needs_i8_conversion(np.array(['a', 'b']))
+    >>> needs_i8_conversion(np.array(["a", "b"]))
     False
     >>> needs_i8_conversion(pd.Series([1, 2]))
     False
@@ -1092,11 +1127,11 @@ def is_numeric_dtype(arr_or_dtype) -> bool:
     False
     >>> is_numeric_dtype(np.timedelta64)
     False
-    >>> is_numeric_dtype(np.array(['a', 'b']))
+    >>> is_numeric_dtype(np.array(["a", "b"]))
     False
     >>> is_numeric_dtype(pd.Series([1, 2]))
     True
-    >>> is_numeric_dtype(pd.Index([1, 2.]))
+    >>> is_numeric_dtype(pd.Index([1, 2.0]))
     True
     >>> is_numeric_dtype(np.array([], dtype=np.timedelta64))
     False
@@ -1168,11 +1203,11 @@ def is_float_dtype(arr_or_dtype) -> bool:
     False
     >>> is_float_dtype(float)
     True
-    >>> is_float_dtype(np.array(['a', 'b']))
+    >>> is_float_dtype(np.array(["a", "b"]))
     False
     >>> is_float_dtype(pd.Series([1, 2]))
     False
-    >>> is_float_dtype(pd.Index([1, 2.]))
+    >>> is_float_dtype(pd.Index([1, 2.0]))
     True
     """
     return _is_dtype_type(arr_or_dtype, classes(np.floating)) or _is_dtype(
@@ -1210,7 +1245,7 @@ def is_bool_dtype(arr_or_dtype) -> bool:
     True
     >>> is_bool_dtype(np.bool_)
     True
-    >>> is_bool_dtype(np.array(['a', 'b']))
+    >>> is_bool_dtype(np.array(["a", "b"]))
     False
     >>> is_bool_dtype(pd.Series([1, 2]))
     False
@@ -1294,13 +1329,13 @@ def is_extension_array_dtype(arr_or_dtype) -> bool:
     Examples
     --------
     >>> from pandas.api.types import is_extension_array_dtype
-    >>> arr = pd.Categorical(['a', 'b'])
+    >>> arr = pd.Categorical(["a", "b"])
     >>> is_extension_array_dtype(arr)
     True
     >>> is_extension_array_dtype(arr.dtype)
     True
 
-    >>> arr = np.array(['a', 'b'])
+    >>> arr = np.array(["a", "b"])
     >>> is_extension_array_dtype(arr.dtype)
     False
     """
@@ -1347,7 +1382,7 @@ def is_complex_dtype(arr_or_dtype) -> bool:
     False
     >>> is_complex_dtype(np.complex128)
     True
-    >>> is_complex_dtype(np.array(['a', 'b']))
+    >>> is_complex_dtype(np.array(["a", "b"]))
     False
     >>> is_complex_dtype(pd.Series([1, 2]))
     False
@@ -1548,8 +1583,8 @@ def _validate_date_like_dtype(dtype) -> None:
         raise TypeError(e) from e
     if typ not in ["generic", "ns"]:
         raise ValueError(
-            f"{repr(dtype.name)} is too specific of a frequency, "
-            f"try passing {repr(dtype.type.__name__)}"
+            f"{dtype.name!r} is too specific of a frequency, "
+            f"try passing {dtype.type.__name__!r}"
         )
 
 
@@ -1706,7 +1741,6 @@ __all__ = [
     "is_float_dtype",
     "is_int64_dtype",
     "is_integer_dtype",
-    "is_interval",
     "is_interval_dtype",
     "is_iterator",
     "is_named_tuple",

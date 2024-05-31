@@ -1,4 +1,5 @@
-""" Test cases for DataFrame.plot """
+"""Test cases for DataFrame.plot"""
+
 from datetime import (
     date,
     datetime,
@@ -204,7 +205,7 @@ class TestDataFramePlots:
             columns=columns,
             index=index,
         )
-        _check_plot_works(df.plot, title="\u03A3")
+        _check_plot_works(df.plot, title="\u03a3")
 
     @pytest.mark.slow
     @pytest.mark.parametrize("layout", [None, (-1, 1)])
@@ -1199,12 +1200,10 @@ class TestDataFramePlots:
         axes = df.plot.hist(rot=50, fontsize=8, orientation="horizontal")
         _check_ticks_props(axes, xrot=0, yrot=50, ylabelsize=8)
 
-    @pytest.mark.parametrize(
-        "weights", [0.1 * np.ones(shape=(100,)), 0.1 * np.ones(shape=(100, 2))]
-    )
-    def test_hist_weights(self, weights):
+    @pytest.mark.parametrize("weight_shape", [(100,), (100, 2)])
+    def test_hist_weights(self, weight_shape):
         # GH 33173
-
+        weights = 0.1 * np.ones(shape=weight_shape)
         df = DataFrame(
             dict(zip(["A", "B"], np.random.default_rng(2).standard_normal((2, 100))))
         )
@@ -1630,7 +1629,7 @@ class TestDataFramePlots:
         for ax in axes:
             _check_text_labels(ax.texts, df.index)
         for ax, ylabel in zip(axes, df.columns):
-            assert ax.get_ylabel() == ylabel
+            assert ax.get_ylabel() == ""
 
     def test_pie_df_labels_colors(self):
         df = DataFrame(
@@ -2002,7 +2001,7 @@ class TestDataFramePlots:
         plt.close("all")
 
         gs, axes = _generate_4_axes_via_gridspec()
-        with tm.assert_produces_warning(UserWarning):
+        with tm.assert_produces_warning(UserWarning, match="sharex and sharey"):
             axes = df.plot(subplots=True, ax=axes, sharex=True)
         _check(axes)
 
@@ -2066,7 +2065,7 @@ class TestDataFramePlots:
         plt.close("all")
 
         gs, axes = _generate_4_axes_via_gridspec()
-        with tm.assert_produces_warning(UserWarning):
+        with tm.assert_produces_warning(UserWarning, match="sharex and sharey"):
             axes = df.plot(subplots=True, ax=axes, sharey=True)
 
         gs.tight_layout(plt.gcf())
@@ -2187,7 +2186,7 @@ class TestDataFramePlots:
 
         # vertical / subplots / sharex=True / sharey=True
         ax1, ax2 = _get_vertical_grid()
-        with tm.assert_produces_warning(UserWarning):
+        with tm.assert_produces_warning(UserWarning, match="sharex and sharey"):
             axes = df.plot(subplots=True, ax=[ax1, ax2], sharex=True, sharey=True)
         assert len(axes[0].lines) == 1
         assert len(axes[1].lines) == 1
@@ -2203,7 +2202,7 @@ class TestDataFramePlots:
 
         # horizontal / subplots / sharex=True / sharey=True
         ax1, ax2 = _get_horizontal_grid()
-        with tm.assert_produces_warning(UserWarning):
+        with tm.assert_produces_warning(UserWarning, match="sharex and sharey"):
             axes = df.plot(subplots=True, ax=[ax1, ax2], sharex=True, sharey=True)
         assert len(axes[0].lines) == 1
         assert len(axes[1].lines) == 1
@@ -2253,7 +2252,7 @@ class TestDataFramePlots:
 
         # subplots / sharex=True / sharey=True
         axes = _get_boxed_grid()
-        with tm.assert_produces_warning(UserWarning):
+        with tm.assert_produces_warning(UserWarning, match="sharex and sharey"):
             axes = df.plot(subplots=True, ax=axes, sharex=True, sharey=True)
         for ax in axes:
             assert len(ax.lines) == 1
@@ -2578,6 +2577,21 @@ class TestDataFramePlots:
         with tm.assert_produces_warning(False):
             _ = df.plot()
             _ = df.T.plot()
+
+    @pytest.mark.parametrize("freq", ["h", "7h", "60min", "120min", "3M"])
+    def test_plot_period_index_makes_no_right_shift(self, freq):
+        # GH#57587
+        idx = pd.period_range("01/01/2000", freq=freq, periods=4)
+        df = DataFrame(
+            np.array([0, 1, 0, 1]),
+            index=idx,
+            columns=["A"],
+        )
+        expected = idx.values
+
+        ax = df.plot()
+        result = ax.get_lines()[0].get_xdata()
+        assert all(str(result[i]) == str(expected[i]) for i in range(4))
 
 
 def _generate_4_axes_via_gridspec():

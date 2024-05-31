@@ -41,10 +41,12 @@ if TYPE_CHECKING:
     )
 
     from pandas._typing import (
+        AnyArrayLike,
         ArrayLike,
         DtypeArg,
         DtypeObj,
         ReadCsvBuffer,
+        SequenceT,
     )
 
     from pandas import (
@@ -164,30 +166,28 @@ class CParserWrapper(ParserBase):
         # error: Cannot determine type of 'names'
         self.orig_names = self.names  # type: ignore[has-type]
 
-        if not self._has_complex_date_col:
-            # error: Cannot determine type of 'index_col'
-            if self._reader.leading_cols == 0 and is_index_col(
-                self.index_col  # type: ignore[has-type]
-            ):
-                self._name_processed = True
-                (
-                    index_names,
-                    # error: Cannot determine type of 'names'
-                    self.names,  # type: ignore[has-type]
-                    self.index_col,
-                ) = self._clean_index_names(
-                    # error: Cannot determine type of 'names'
-                    self.names,  # type: ignore[has-type]
-                    # error: Cannot determine type of 'index_col'
-                    self.index_col,  # type: ignore[has-type]
-                )
+        # error: Cannot determine type of 'index_col'
+        if self._reader.leading_cols == 0 and is_index_col(
+            self.index_col  # type: ignore[has-type]
+        ):
+            (
+                index_names,
+                # error: Cannot determine type of 'names'
+                self.names,  # type: ignore[has-type]
+                self.index_col,
+            ) = self._clean_index_names(
+                # error: Cannot determine type of 'names'
+                self.names,  # type: ignore[has-type]
+                # error: Cannot determine type of 'index_col'
+                self.index_col,  # type: ignore[has-type]
+            )
 
-                if self.index_names is None:
-                    self.index_names = index_names
+            if self.index_names is None:
+                self.index_names = index_names
 
-            if self._reader.header is None and not passed_names:
-                assert self.index_names is not None
-                self.index_names = [None] * len(self.index_names)
+        if self._reader.header is None and not passed_names:
+            assert self.index_names is not None
+            self.index_names = [None] * len(self.index_names)
 
         self._implicit_index = self._reader.leading_cols > 0
 
@@ -225,7 +225,7 @@ class CParserWrapper(ParserBase):
     ) -> tuple[
         Index | MultiIndex | None,
         Sequence[Hashable] | MultiIndex,
-        Mapping[Hashable, ArrayLike],
+        Mapping[Hashable, AnyArrayLike],
     ]:
         index: Index | MultiIndex | None
         column_names: Sequence[Hashable] | MultiIndex
@@ -233,7 +233,7 @@ class CParserWrapper(ParserBase):
             if self.low_memory:
                 chunks = self._reader.read_low_memory(nrows)
                 # destructive to chunks
-                data = _concatenate_chunks(chunks)
+                data = _concatenate_chunks(chunks, self.names)  # type: ignore[has-type]
 
             else:
                 data = self._reader.read(nrows)
@@ -248,7 +248,11 @@ class CParserWrapper(ParserBase):
                     names,
                     dtype=self.dtype,
                 )
-                columns = self._maybe_make_multi_index_columns(columns, self.col_names)
+                # error: Incompatible types in assignment (expression has type
+                # "list[Hashable] | MultiIndex", variable has type "list[Hashable]")
+                columns = self._maybe_make_multi_index_columns(  # type: ignore[assignment]
+                    columns, self.col_names
+                )
 
                 if self.usecols is not None:
                     columns = self._filter_usecols(columns)
@@ -268,9 +272,6 @@ class CParserWrapper(ParserBase):
         names = self.names  # type: ignore[has-type]
 
         if self._reader.leading_cols:
-            if self._has_complex_date_col:
-                raise NotImplementedError("file structure not yet supported")
-
             # implicit index, no index names
             arrays = []
 
@@ -301,12 +302,10 @@ class CParserWrapper(ParserBase):
             data_tups = sorted(data.items())
             data = {k: v for k, (i, v) in zip(names, data_tups)}
 
-            column_names, date_data = self._do_date_conversions(names, data)
+            date_data = self._do_date_conversions(names, data)
 
             # maybe create a mi on the columns
-            column_names = self._maybe_make_multi_index_columns(
-                column_names, self.col_names
-            )
+            column_names = self._maybe_make_multi_index_columns(names, self.col_names)
 
         else:
             # rename dict keys
@@ -329,16 +328,16 @@ class CParserWrapper(ParserBase):
 
             data = {k: v for k, (i, v) in zip(names, data_tups)}
 
-            names, date_data = self._do_date_conversions(names, data)
+            date_data = self._do_date_conversions(names, data)
             index, column_names = self._make_index(date_data, alldata, names)
 
         return index, column_names, date_data
 
-    def _filter_usecols(self, names: Sequence[Hashable]) -> Sequence[Hashable]:
+    def _filter_usecols(self, names: SequenceT) -> SequenceT | list[Hashable]:
         # hackish
         usecols = self._evaluate_usecols(self.usecols, names)
         if usecols is not None and len(names) != len(usecols):
-            names = [
+            return [
                 name for i, name in enumerate(names) if i in usecols or name in usecols
             ]
         return names
@@ -352,7 +351,9 @@ class CParserWrapper(ParserBase):
         return values
 
 
-def _concatenate_chunks(chunks: list[dict[int, ArrayLike]]) -> dict:
+def _concatenate_chunks(
+    chunks: list[dict[int, ArrayLike]], column_names: list[str]
+) -> dict:
     """
     Concatenate chunks of data read with low_memory=True.
 
@@ -375,10 +376,12 @@ def _concatenate_chunks(chunks: list[dict[int, ArrayLike]]) -> dict:
         else:
             result[name] = concat_compat(arrs)
             if len(non_cat_dtypes) > 1 and result[name].dtype == np.dtype(object):
-                warning_columns.append(str(name))
+                warning_columns.append(column_names[name])
 
     if warning_columns:
-        warning_names = ",".join(warning_columns)
+        warning_names = ", ".join(
+            [f"{index}: {name}" for index, name in enumerate(warning_columns)]
+        )
         warning_message = " ".join(
             [
                 f"Columns ({warning_names}) have mixed types. "
@@ -390,7 +393,7 @@ def _concatenate_chunks(chunks: list[dict[int, ArrayLike]]) -> dict:
 
 
 def ensure_dtype_objs(
-    dtype: DtypeArg | dict[Hashable, DtypeArg] | None
+    dtype: DtypeArg | dict[Hashable, DtypeArg] | None,
 ) -> DtypeObj | dict[Hashable, DtypeObj] | None:
     """
     Ensure we have either None, a dtype object, or a dictionary mapping to
