@@ -376,13 +376,7 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
         ):
             if not allow_mgr:
                 # GH#52419
-                warnings.warn(
-                    f"Passing a {type(data).__name__} to {type(self).__name__} "
-                    "is deprecated and will raise in a future version. "
-                    "Use public APIs instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
+                raise TypeError(f"Passing a {type(data).__name__} is unsupported")
             data = data.copy(deep=False)
             # GH#33357 called with just the SingleBlockManager
             NDFrame.__init__(self, data)
@@ -400,13 +394,7 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
             data = data.copy(deep=False)
 
             if not allow_mgr:
-                warnings.warn(
-                    f"Passing a {type(data).__name__} to {type(self).__name__} "
-                    "is deprecated and will raise in a future version. "
-                    "Use public APIs instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
+                raise TypeError(f"Passing a {type(data).__name__} is unsupported")
 
         name = ibase.maybe_extract_name(name, data, type(self))
 
@@ -469,14 +457,7 @@ class Series(base.IndexOpsMixin, NDFrame):  # type: ignore[misc]
                 )
 
             if not allow_mgr:
-                warnings.warn(
-                    f"Passing a {type(data).__name__} to {type(self).__name__} "
-                    "is deprecated and will raise in a future version. "
-                    "Use public APIs instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-                allow_mgr = True
+                raise TypeError(f"Passing a {type(data).__name__} is unsupported")
 
         elif isinstance(data, ExtensionArray):
             pass
