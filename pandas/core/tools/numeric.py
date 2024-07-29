@@ -8,7 +8,10 @@ import warnings
 
 import numpy as np
 
-from pandas._libs import lib
+from pandas._libs import (
+    lib,
+    missing as libmissing,
+)
 from pandas.util._exceptions import find_stack_level
 from pandas.util._validators import check_dtype_backend
 
@@ -207,8 +210,6 @@ def to_numeric(
     else:
         values = arg
 
-    orig_values = values
-
     # GH33013: for IntegerArray & FloatingArray extract non-null values for casting
     # save mask to reconstruct the full array after casting
     mask: npt.NDArray[np.bool_] | None = None
@@ -227,20 +228,15 @@ def to_numeric(
         values = values.view(np.int64)
     else:
         values = ensure_object(values)
-        coerce_numeric = errors not in ("ignore", "raise")
-        try:
-            values, new_mask = lib.maybe_convert_numeric(  # type: ignore[call-overload]
-                values,
-                set(),
-                coerce_numeric=coerce_numeric,
-                convert_to_masked_nullable=dtype_backend is not lib.no_default
-                or isinstance(values_dtype, StringDtype)
-                and not values_dtype.storage == "pyarrow_numpy",
-            )
-        except (ValueError, TypeError):
-            if errors == "raise":
-                raise
-            values = orig_values
+        coerce_numeric = errors != "raise"
+        values, new_mask = lib.maybe_convert_numeric(  # type: ignore[call-overload]
+            values,
+            set(),
+            coerce_numeric=coerce_numeric,
+            convert_to_masked_nullable=dtype_backend is not lib.no_default
+            or isinstance(values_dtype, StringDtype)
+            and values_dtype.na_value is libmissing.NA,
+        )
 
     if new_mask is not None:
         # Remove unnecessary values, is expected later anyway and enables
@@ -250,7 +246,7 @@ def to_numeric(
         dtype_backend is not lib.no_default
         and new_mask is None
         or isinstance(values_dtype, StringDtype)
-        and not values_dtype.storage == "pyarrow_numpy"
+        and values_dtype.na_value is libmissing.NA
     ):
         new_mask = np.zeros(values.shape, dtype=np.bool_)
 
