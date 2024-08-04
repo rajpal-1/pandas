@@ -608,6 +608,14 @@ class ExtensionArray:
         """
         An instance of ExtensionDtype.
 
+        See Also
+        --------
+        api.extensions.ExtensionDtype : Base class for extension dtypes.
+        api.extensions.ExtensionArray : Base class for extension array types.
+        api.extensions.ExtensionArray.dtype : The dtype of an ExtensionArray.
+        Series.dtype : The dtype of a Series.
+        DataFrame.dtype : The dtype of a DataFrame.
+
         Examples
         --------
         >>> pd.array([1, 2, 3]).dtype
