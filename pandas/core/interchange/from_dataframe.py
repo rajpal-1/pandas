@@ -60,6 +60,13 @@ def from_dataframe(df, allow_copy: bool = True) -> pd.DataFrame:
     Returns
     -------
     pd.DataFrame
+        A pandas DataFrame built from the provided interchange
+        protocol object.
+
+    See Also
+    --------
+    _from_dataframe : Internal function to build a pandas DataFrame from
+        a DataFrameXchg.
 
     Examples
     --------
