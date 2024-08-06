@@ -2049,11 +2049,11 @@ class ExtensionArray:
         >>> pd.array([1, 2, 3])._reduce("sum")
         6
         >>> pd.array([1, 2, 3])._reduce("mean")
-        2.0
+        2
         >>> pd.array([1, 2, 3])._reduce("median")
         2
         >>> pd.array([1, 2, 3])._reduce("mean", keepdims=True)
-        array([2.0])
+        array([2])
         >>> pd.array([1, np.nan, 2, np.nan])._reduce("sum", skipna=False)
         nan
         >>> pd.array([1, np.nan, 2, np.nan])._reduce("sum", skipna=True)
