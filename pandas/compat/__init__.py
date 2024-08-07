@@ -25,6 +25,7 @@ from pandas.compat._constants import (
 import pandas.compat.compressors
 from pandas.compat.numpy import is_numpy_dev
 from pandas.compat.pyarrow import (
+    HAS_PYARROW,
     pa_version_under10p1,
     pa_version_under11p0,
     pa_version_under13p0,
@@ -188,6 +189,7 @@ __all__ = [
     "pa_version_under14p0",
     "pa_version_under14p1",
     "pa_version_under16p0",
+    "HAS_PYARROW",
     "IS64",
     "ISMUSL",
     "PY310",
