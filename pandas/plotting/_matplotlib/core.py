@@ -10,6 +10,7 @@ from collections.abc import (
     Iterator,
     Sequence,
 )
+from random import shuffle
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1337,6 +1338,13 @@ class ScatterPlot(PlanePlot):
         norm, cmap = self._get_norm_and_cmap(c_values, color_by_categorical)
         cb = self._get_colorbar(c_values, c_is_column)
 
+        # if a list of non color strings is passed in as c, generate a list
+        # colored by uniqueness of the strings, such same strings get same color
+        create_colors = not self._are_valid_colors(c_values)
+        if create_colors:
+            custom_color_mapping, c_values = self._uniquely_color_strs(c_values)
+            cb = False  # no colorbar; opt for legend
+
         if self.legend:
             label = self.label
         else:
@@ -1367,6 +1375,15 @@ class ScatterPlot(PlanePlot):
                 label,  # type: ignore[arg-type]
             )
 
+        # build legend for labeling custom colors
+        if create_colors:
+            ax.legend(
+                handles=[
+                    mpl.patches.Circle((0, 0), facecolor=color, label=string)
+                    for string, color in custom_color_mapping.items()
+                ]
+            )
+
         errors_x = self._get_errorbars(label=x, index=0, yerr=False)
         errors_y = self._get_errorbars(label=y, index=0, xerr=False)
         if len(errors_x) > 0 or len(errors_y) > 0:
@@ -1389,6 +1406,38 @@ class ScatterPlot(PlanePlot):
         else:
             c_values = c
         return c_values
+
+    def _are_valid_colors(self, c_values: np.ndarray | list):
+        # check if c_values contains strings and if these strings are valid mpl colors.
+        # no need to check numerics as these (and mpl colors) will be validated for us
+        # in .Axes.scatter._parse_scatter_color_args(...)
+        try:
+            if len(c_values) and all(isinstance(c, str) for c in c_values):
+                mpl.colors.to_rgba_array(c_values)
+
+            return True
+
+        except (TypeError, ValueError) as _:
+            return False
+
+    def _uniquely_color_strs(
+        self, c_values: np.ndarray | list
+    ) -> tuple[dict, np.ndarray]:
+        # well, almost uniquely color them (up to 949)
+        unique = np.unique(c_values)
+
+        # for up to 7, lets keep colors consistent
+        if len(unique) <= 7:
+            possible_colors = list(mpl.colors.BASE_COLORS.values())  # Hex
+        # explore better ways to handle this case
+        else:
+            possible_colors = list(mpl.colors.XKCD_COLORS.values())  # Hex
+            shuffle(possible_colors)
+
+        colors = [possible_colors[i % len(possible_colors)] for i in range(len(unique))]
+        color_mapping = dict(zip(unique, colors))
+
+        return color_mapping, np.array(list(map(color_mapping.get, c_values)))
 
     def _get_norm_and_cmap(self, c_values, color_by_categorical: bool):
         c = self.c
