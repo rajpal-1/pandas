@@ -14,6 +14,8 @@ from zipfile import BadZipFile
 import numpy as np
 import pytest
 
+from pandas._config import using_string_dtype
+
 from pandas.compat._optional import import_optional_dependency
 from pandas.errors import (
     EmptyDataError,
@@ -1044,7 +1046,7 @@ def test_utf16_encoding(xml_baby_names, parser):
         UnicodeError,
         match=(
             "UTF-16 stream does not start with BOM|"
-            "'utf-16-le' codec can't decode byte"
+            "'utf-16(-le)?' codec can't decode byte"
         ),
     ):
         read_xml(xml_baby_names, encoding="UTF-16", parser=parser)
@@ -2005,6 +2007,7 @@ def test_s3_parser_consistency(s3_public_bucket_with_data, s3so):
     tm.assert_frame_equal(df_lxml, df_etree)
 
 
+@pytest.mark.xfail(using_string_dtype(), reason="TODO(infer_string)", strict=False)
 def test_read_xml_nullable_dtypes(
     parser, string_storage, dtype_backend, using_infer_string
 ):
