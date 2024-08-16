@@ -2477,6 +2477,8 @@ def maybe_convert_objects(ndarray[object] objects,
         Whether to convert datetime, timedelta, period, interval types.
     dtype_if_all_nat : np.dtype, ExtensionDtype, or None, default None
         Dtype to cast to if we have all-NaT.
+    storage : {None, "python", "pyarrow", "pyarrow_numpy"}, default None
+        Backend storage
 
     Returns
     -------
